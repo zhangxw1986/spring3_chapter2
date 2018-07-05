@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- 引用spring的多个schema空间的格式定义文件-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+       http://www.springframework.org/schema/context 
+       http://www.springframework.org/schema/context/spring-context-3.0.xsd
+       http://www.springframework.org/schema/tx 
+       http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+       
+       <!-- ①扫描类包，将标注Spring注解的类自动转换为Bean，同时完成Bean的注入 -->
+       <!-- 使用spring的<context:component-scan>扫描指定类包下的所有类，这样在类中定义的注解（@Repository,@Autowired）才能生效 -->
+       <context:component-scan base-package="com.baobaotao.dao"/>
+       <context:component-scan base-package="com.baobaotao.service" />
+       
+       <!-- ②定义一个DBCP的数据源，该数据源为Jakarta的开源数据源方案-->
+        <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+       		destroy-method="close"
+       		p:driverClassName="com.mysql.jdbc.Driver"
+       		p:url="jdbc:mysql://localhost:3306/sampledb"
+       		p:username="root"
+       		p:password="root" />
+       	
+       	<!-- ③定义Jdbc模板Bean -->
+       	<!-- 将②处定义的dataSource注入到JdbcTemplate，而这个JdbcTemplate Bean将通过@Autowired自动注入到LoginLog和UserDao中的bean中 -->
+       	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate"
+       		p:dataSource-ref="dataSource" />	
+       		
+       	<!-- 配置事务管理器 -->
+       	<bean id="transactionManager"
+       		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+       		p:dataSource-ref="dataSource" >
+       	</bean>
+       	
+       	<!-- 通过AOP配置提供事务增强，让service包下所有Bean的所有方法拥有事务 -->
+       	<aop:config proxy-target-class="true">
+       		<aop:pointcut id="serviceMethod"
+       			expression=" execution(* com.baobaotao.service..*(..))"></aop:pointcut>
+       		<aop:advisor pointcut-ref="serviceMethod" advice-ref="txAdvice" />
+       	</aop:config>
+       	
+       	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+       		<tx:attributes>
+       			<tx:method name="*" />
+       		</tx:attributes>
+       	</tx:advice>
+</beans>
+       
